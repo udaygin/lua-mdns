@@ -86,7 +86,7 @@ nil.
 
 ## License
 
-_lua-mdns_ is released under the MIT license.
+_nodemcu-mdns-client_ is released under the MIT license.
 
 
     Original work Copyright (c) 2015 Frank Edelhaeuser
