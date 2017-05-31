@@ -1,7 +1,8 @@
 --[[
 
     Copyright (c) 2015 Frank Edelhaeuser
-
+    Modified work Copyright (c) 2017 Uday G
+    
     This file is part of lua-mdns.
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,9 +25,9 @@
 
     Usage:
 
-        require('mdns')
+        mdnsclient = require('mdnsclient')
 
-        local res = mdns_resolve('_printer._tcp') -- find printers
+        local res = mdnsclient.query('_printer._tcp') -- find printers
         if (res) then
             for k,v in pairs(res) do
                 print(k)
@@ -37,10 +38,10 @@
         else
             print('no result')
         end
-
 ]]--
-local socket = require('socket')
 
+local mdnsclient = {}
+do
 
 local function mdns_make_query(service)
     -- header: transaction id, flags, qdcount, ancount, nscount, nrcount
@@ -51,7 +52,6 @@ local function mdns_make_query(service)
     end
     return data..string.char(0)..'\000\012'..'\000\001'
 end
-
 
 local function mdns_parse(service, data, answers)
 
@@ -192,16 +192,17 @@ end
 
 --- Locate MDNS services in local network
 --
--- @param service   MDNS service name to search for (e.g. _ipps._tcp). A .local postfix will 
+-- @param service   MDNS service name to search for (e.g. _ipps._tcp). A .local postfix will
 --                  be appended if needed. If this parameter is not specified, all services
 --                  will be queried.
 --
--- @param timeout   Number of seconds to wait for MDNS responses. The default timeout is 2 
+-- @param timeout   Number of seconds to wait for MDNS responses. The default timeout is 2
 --                  seconds if this parameter is not specified.
 --
--- @return          Table of MDNS services. Entry keys are service identifiers. Each entry
---                  is a table containing all or a subset of the following elements:
+-- @param own_ip    querying device IP address
 --
+-- @param callback  to receive Table of MDNS services. Entry keys are service identifiers. Each entry
+--                  is a table containing all or a subset of the following elements:
 --                      name: MDNS service name (e.g. HP Laserjet 4L @ server.example.com)
 --                      service: MDNS service type (e.g. _ipps._tcp.local)
 --                      hostname: hostname
@@ -209,7 +210,9 @@ end
 --                      ipv4: IPv4 address
 --                      ipv6: IPv6 address
 --
-function mdns_query(service, timeout)
+-- @return          Nothing 
+--
+function query(service, timeout,own_ip,callback)
 
     -- browse all services if no service name specified
     local browse = false
@@ -226,61 +229,73 @@ function mdns_query(service, timeout)
     -- default timeout: 2 seconds
     local timeout = timeout or 2.0
 
-    -- create IPv4 socket for multicast DNS
-    local ip, port, udp = '224.0.0.251', 5353, socket.udp()
 
-    assert(udp:setoption('ip-add-membership', { interface = '*', multiaddr = ip }))
-    assert(udp:settimeout(0.1))
-
-    -- send query
-    assert(udp:sendto(mdns_make_query(service), ip, port))
-
+    local mdns_multicast_ip, mdns_port = '224.0.0.251', 5353
+    ---------------------------------------------------------
+    net.multicastJoin(own_ip, mdns_multicast_ip)
+    udpSocket = net.createUDPSocket()
     -- collect responses until timeout
     local answers = { srv = {}, a = {}, aaaa = {}, ptr = {} }
-    local start = os.time()
-    while (os.time() - start < timeout) do
-        local data, peeraddr, peerport = udp:receivefrom()
-        if data and (peerport == port) then
+    udpSocket:on("receive", function(s, data, port, ip)
+        print(string.format("received '%s' from %s:%d", data, ip, port))
+        if data and (port == mdns_port) then
             mdns_parse(service, data, answers)
             if (browse) then
                 for _, ptr in ipairs(answers.ptr) do
-                    assert(udp:sendto(mdns_make_query(ptr), ip, port))
+                    s:send(mdns_port, mdns_multicast_ip, mdns_make_query(ptr))
                 end
                 answers.ptr = {}
             end
         end
-    end
+    end)
+    udpSocket:listen()
+    port, ip = udpSocket:getaddr()
+    print(string.format("local UDP socket address / port: %s:%d", ip, port))
+    -----------------------------------------------------------------
+    local mdns_query = mdns_make_query(service)
+    udpSocket:send(mdns_port, mdns_multicast_ip,mdns_query)
 
-    -- cleanup socket
-    assert(udp:setoption("ip-drop-membership", { interface = "*", multiaddr = ip }))
-    assert(udp:close())
-    udp = nil
+    tmr.alarm(0,timeout*1000,tmr.ALARM_SINGLE, function()
+        --once the timer is over, cleanup thesockets and collect the results
+        udpSocket:close()
+        net.multicastLeave(own_ip,mdns_multicast_ip)
 
-    -- extract target services from answers, resolve hostnames
-    local services = {}
-    for k,v in pairs(answers.srv) do
-        local pos = k:find('%.')
-        if (pos and (pos > 1) and (pos < #k)) then
-            local name, svc = k:sub(1, pos - 1), k:sub(pos + 1)
-            if (browse) or (svc == service) then
-                if (v.target) then
-                    if (answers.a[v.target]) then
-                        v.ipv4 = answers.a[v.target]
+        local services = {}
+        for k,v in pairs(answers.srv) do
+            local pos = k:find('%.')
+            if (pos and (pos > 1) and (pos < #k)) then
+                local name, svc = k:sub(1, pos - 1), k:sub(pos + 1)
+                if (browse) or (svc == service) then
+                    if (v.target) then
+                        if (answers.a[v.target]) then
+                            v.ipv4 = answers.a[v.target]
+                        end
+                        if (answers.aaaa[v.target]) then
+                            v.ipv6 = answers.aaaa[v.target]
+                        end
+                        if (v.target:sub(-6) == '.local') then
+                            v.hostname = v.target:sub(1, #v.target - 6)
+                        end
+                        v.target = nil
                     end
-                    if (answers.aaaa[v.target]) then
-                        v.ipv6 = answers.aaaa[v.target]
-                    end
-                    if (v.target:sub(-6) == '.local') then
-                        v.hostname = v.target:sub(1, #v.target - 6)
-                    end
-                    v.target = nil
+                    v.service = svc
+                    v.name = name
+                    services[k] = v
                 end
-                v.service = svc
-                v.name = name
-                services[k] = v
             end
         end
-    end
 
-    return services
+        local createCallbackWithArgs = function (err,data)
+            return function()
+                callback(err,data)
+            end
+        end
+        node.task.post(createCallbackWithArgs(nil,services))
+    end)
 end
+
+mdnsclient = {
+    query=query
+}
+end
+return mdnsclient
