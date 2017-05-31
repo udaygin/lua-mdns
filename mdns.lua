@@ -280,6 +280,7 @@ function query(service, timeout,own_ip,callback)
 end
 
 -- query results and 1 based index to identify the result to return when there are more than one matches
+-- query results and 1 based index to identify the result to return when there are more than one matches
 local extractIpAndPortFromResults = function(results,index)
     local ip,port
 
@@ -287,16 +288,17 @@ local extractIpAndPortFromResults = function(results,index)
     for k,v in pairs(results) do
         print(k)
         for k1,v1 in pairs(v) do
-
             print('  '..k1..': '..v1)
-            if(k1=="ipv4") then b_ip = v1 end
-            if(k1=="port") then b_port = v1 end
-            if result_index == index then
-                return ip , port
-                else
-                result_index  = result_index + 1
-            end
+            if(k1=="ipv4") then ip = v1 end
+            if(k1=="port") then port = v1 end
         end
+
+        if result_index == index then
+            return ip , port
+        else
+            result_index  = result_index + 1
+        end
+
     end
     return nil , nil
 end
