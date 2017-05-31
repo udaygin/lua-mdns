@@ -48,7 +48,7 @@ end
 
 print('Connecting to wifi')
 wifi.setmode(wifi.STATION)
-wifi.sta.config('inferno-x', 'Virunga1348$')
+wifi.sta.config('SSID', 'PASSWORD')
 wifi.sta.getip()
 
 wifi.eventmon.register(wifi.eventmon.STA_GOT_IP, function(T)
