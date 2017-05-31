@@ -89,7 +89,7 @@ nil.
 _lua-mdns_ is released under the MIT license.
 
 
-    Copyright (c) 2015 Frank Edelhaeuser
+    Original work Copyright (c) 2015 Frank Edelhaeuser
     Modified work Copyright (c) 2017 Uday G
     
     Permission is hereby granted, free of charge, to any person obtaining a copy
