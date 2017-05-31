@@ -22,22 +22,7 @@
     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
-
-    Usage:
-
-        mdnsclient = require('mdnsclient')
-
-        local res = mdnsclient.query('_printer._tcp') -- find printers
-        if (res) then
-            for k,v in pairs(res) do
-                print(k)
-                for k1,v1 in pairs(v) do
-                    print('  '..k1..': '..v1)
-                end
-            end
-        else
-            print('no result')
-        end
+    
 ]]--
 
 local mdnsclient = {}
@@ -294,8 +279,32 @@ function query(service, timeout,own_ip,callback)
     end)
 end
 
+-- query results and 1 based index to identify the result to return when there are more than one matches
+local extractIpAndPortFromResults = function(results,index)
+    local ip,port
+
+    local result_index = 1
+    for k,v in pairs(results) do
+        print(k)
+        for k1,v1 in pairs(v) do
+
+            print('  '..k1..': '..v1)
+            if(k1=="ipv4") then b_ip = v1 end
+            if(k1=="port") then b_port = v1 end
+            if result_index == index then
+                return ip , port
+                else
+                result_index  = result_index + 1
+            end
+        end
+    end
+    return nil , nil
+end
+
 mdnsclient = {
+    extractIpAndPortFromResults=extractIpAndPortFromResults,
     query=query
 }
+
 end
 return mdnsclient
