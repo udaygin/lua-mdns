@@ -1,6 +1,6 @@
 --[[
 
-    Copyright (c) 2015 Frank Edelhaeuser
+    Original work Copyright (c) 2015 Frank Edelhaeuser
     Modified work Copyright (c) 2017 Uday G
 
     This file is part of lua-mdns.
