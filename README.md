@@ -1,74 +1,74 @@
-# lua-mdns
+# nodemcu-mdns (Update in progress. Please don't pull yet. )
 
 Multicast DNS (mDNS) service browser implemented in pure Lua. mDNS provides the ability to provide and find DNS names for local devices. For more information on mDNS and DNS Service discovery, see <http://www.dns-sd.org>.
 
+This is a adaptation of original repo mrpace2/lua-mdns to nodemcu lua platform. You can discover mqtt brokers or other mdns enabled esp8266 in the same network. 
 
-## Installing
 
-**Prerequisites**
+## Background 
+I am often faced with the problem of hardcoding Mqtt broker, Webserver IPs in iot device firmware and nodemcu being my favourite, my lua code has a lot of hardcoded IPs. And this model breaks when broker IP changes. So wanted the device 
 
-* Lua 5.1 or later (currently tested on Lua 5.1.4 only)
-* LuaSocket 2.0.2 or later (currently tested on LuaSocket 2.0.2 and 3.0rc1)
+## Download and Installation
 
-**Installation using LuaRocks package manager**
-
-    $ sudo luarocks install "https://raw.github.com/mrpace2/lua-mdns/master/mdns-1.0-1.rockspec"
-
-**Installation from Git**
-
-    $ git clone https://github.com/mrpace2/lua-mdns
-
+since this is a single module file, I suggest raw file download for mdnsclient.lua instead of a checkout. this is ment to be used in your project.
 
 ## Example Usage
 
-The code below queries all mDNS services available on the local network.
+The code below queries all mqtt brokers available on the local network and prints the IP address and port number for the first one
 
-    require('mdns')
+```lua
+    mc = require('mdnsclient')
+    local service_to_query = '_mqtt._tcp' --service pattern to search
+    local query_timeout = 2 -- 4 seconds
 
-    -- DNS service discovery (defaults: all services, 2 seconds timeout)
-    local res = mdns_resolve()
-    if (res) then
-        for k,v in pairs(res) do
-            -- output key name
-            print(k) 
-            for k1,v1 in pairs(v) do
-                -- output service descriptor fields
-                print('  '..k1..': '..v1)
-            end
+    -- handler to do some thing useful with mdns query results
+    local query_result_handler  = function(err,query_result)
+        if (query_result ~= nil) then
+            local broker_ip,broker_port = query_result[1].ipv4,query_result[1].port
+            print('Broker '..broker_ip ..":"..broker_port)
+        else
+            print('no mqtt brokers found in local network. please ensure that they are running and advertising on mdns')
         end
-    else
-        print('no result')
     end
-
-If called without parameters, `mdns_resolve` returns all available services after the default timeout of 2 seconds. Additional examples can be found in the `examples` subdirectory.
+    
+    print('Connecting to wifi')
+    wifi.setmode(wifi.STATION)
+    wifi.sta.config('<SSID>', '<PASSWORD>')
+    wifi.sta.getip()
+    wifi.eventmon.register(wifi.eventmon.STA_GOT_IP, function(T)
+        print("\n\tSTA - GOT IP".."\n\tStation IP: "..T.IP)
+        mc.mdns_query( service_to_query, query_timeout, T.IP, query_result_handler)
+    end)
+```
+If called without parameters, `query` returns all available services after the default timeout of 2 seconds. Additional examples can be found in the `examples` subdirectory.
 
 
 ## Reference
 
-The only exported function is _mdns\_resolve_.
+The only exported function is _query_.
 
-
-### mdns_resolve
+### query
 
 **Usage**
 
-    result = mdns_resolve([<service>, [<timeout>]])
+    mdnsclient = require('mdnsclient')
+    result = mdnsclient.query([<service>, <timeout_in_sec>,<esp8266_ip>,<callback>])
 
 
 **Parameters**
 
-_mdns\_resolve_ takes up to two parameters:
+_query_ takes up to two parameters:
 
 * **service**: mDNS service name (e.g. \_printers.\_tcp.local). The _.local_ suffix may be omitted. If this parameter is missing or if it evaluates to `nil`, _mdns\_resolve_ queries all available mDNS services by using enumerating the *\_services.\_dns-sd.\_udp.local* service.
 
 * **timeout**: Timeout in seconds waiting for mDNS responses. If this parameter is missing or if it evaluates to `nil`, _mdns\_resolve_ uses the dafault timeout of 2 seconds.
 
+* **own_ip**: Timeout in seconds waiting for mDNS responses. If this parameter is missing or if it evaluates to `nil`, _mdns\_resolve_ uses the dafault timeout of 2 seconds.
 
-**Return value**
+* **callback**: If _query_ succeeds, an associateve array of service descriptors is returned as a Lua table to the callback method which should expect two parameters like this `callback(err,result)`. Please note that the array may be empty if there is no mDNS service available on the local network. In case of error, _err_ is populated ad result is nil.
 
-If _mdns\_resolve_ succeeds, an associateve array of service descriptors is returned as a Lua table. Please note that the array may be empty if there is no mDNS service available on the local network. In case of error, the function either asserts, or it returns `nil`.
 
-Service descriptors returned by _mdns\_resolve_ may contain a combination of the following fields:
+Service descriptors returned by _mdns\_query_ may contain a combination of the following fields:
 
 * **name**: mDNS service name (e.g. _HP Laserjet 4L @ server.example.com_)
 * **service**: mDNS service type (e.g. _\_ipps.\_tcp.local_)
@@ -79,6 +79,9 @@ Service descriptors returned by _mdns\_resolve_ may contain a combination of the
 
 _mdns\_resolve_ returns whatever information the mDNS daemons provide. The presence of certain fields doesn't imply that the system running _lua-mdns_ supports all features. For example, an IPv6 address may be returned even though the LuaSocket library installed on the system may not support IPv6. Resolving such potetial mismatches is beyond the scope of _lua-mdns_.
 
+**Return value** 
+nil. 
+
 
 ## License
 
@@ -86,7 +89,8 @@ _lua-mdns_ is released under the MIT license.
 
 
     Copyright (c) 2015 Frank Edelhaeuser
-
+    Modified work Copyright (c) 2017 Uday G
+    
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
     in the Software without restriction, including without limitation the rights
