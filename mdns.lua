@@ -212,9 +212,7 @@ function query(service, timeout,own_ip,callback)
     -- default timeout: 2 seconds
     local timeout = timeout or 2.0
 
-
     local mdns_multicast_ip, mdns_port = '224.0.0.251', 5353
-    ---------------------------------------------------------
     net.multicastJoin(own_ip, mdns_multicast_ip)
     udpSocket = net.createUDPSocket()
     -- collect responses until timeout
@@ -233,8 +231,6 @@ function query(service, timeout,own_ip,callback)
     end)
     udpSocket:listen()
     port, ip = udpSocket:getaddr()
-    print(string.format("local UDP socket address / port: %s:%d", ip, port))
-    -----------------------------------------------------------------
     local mdns_query = mdns_make_query(service)
     udpSocket:send(mdns_port, mdns_multicast_ip,mdns_query)
 
