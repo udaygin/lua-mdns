@@ -1,18 +1,17 @@
 # nodemcu-mdns (Update in progress. Please don't pull yet. )
 
-Multicast DNS (mDNS) service browser implemented in pure Lua. mDNS provides the ability to provide and find DNS names for local devices. For more information on mDNS and DNS Service discovery, see <http://www.dns-sd.org>.
-
-This is a adaptation of original repo mrpace2/lua-mdns to nodemcu lua platform. You can discover mqtt brokers or other mdns enabled esp8266 in the same network. 
-
+Multicast DNS (mDNS) service client/browser in pure Lua for nodemcu platform. mDNS provides the ability to provide and find DNS names for local devices. For more information on mDNS and DNS Service discovery, see <http://www.dns-sd.org>.
 
 ## Background 
-I am often faced with the problem of hardcoding Mqtt broker, Webserver IPs in iot device firmware and nodemcu being my favourite, my lua code has a lot of hardcoded IPs. And this model breaks when broker IP changes. So wanted the device 
+I am often faced with the problem of hardcoding Mqtt broker, Webserver IPs in iot device firmware and nodemcu being my favourite, my lua code has a lot of hardcoded IPs. And this model breaks when broker IP changes. So wanted the device to auto discover services by type and zeroconf/mdns looked like the best option for this usecase. While searching for nodemcu modules, I found the work of mrpace2 at mrpace2/lua-mdns and ported it to work with nodemcu platform network stack and callback style. 
+
+if you are looking for a way to make your esp8266 discoverable in local network with out knowing the IP, it is already available in nodemcu firmware as a [module](https://nodemcu.readthedocs.io/en/master/en/modules/mdns/) .  
 
 ## Download and Installation
 
-since this is a single module file, I suggest raw file download for mdnsclient.lua instead of a checkout. this is ment to be used in your project.
+since this is a single module file, I suggest raw file download for [mdnsclient.lua module]( mdnsclient.lua?raw=true )  instead of a repo checkout. This is meant to be used in your project.
 
-## Example Usage
+## Example 
 
 The code below queries all mqtt brokers available on the local network and prints the IP address and port number for the first one
 
