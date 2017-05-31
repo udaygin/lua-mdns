@@ -1,6 +1,7 @@
 --[[
 
     Copyright (c) 2015 Frank Edelhaeuser
+    Modified work Copyright (c) 2017 Uday G
 
     This file is part of lua-mdns.
 
@@ -23,17 +24,35 @@
     SOFTWARE.
 
 ]]--
-require('../mdns')
 
--- Query all MDNS services
-local res = mdns_query()
-if (res) then
-    for k,v in pairs(res) do
-        print(k)
-        for k1,v1 in pairs(v) do
-            print('  '..k1..': '..v1)
+mc = require('../mdnsclient')
+
+-- constants
+local service_to_query = '' --service pattern to search
+local query_timeout = 2 -- seconds
+
+-- handler to do some thing useful with mdns query results
+local result_handler  = function(err,res)
+    if (res) then
+        print('Results:')
+        for k,v in pairs(res) do
+            print(k)
+            for k1,v1 in pairs(v) do
+                print('  '..k1..': '..v1)
+            end
         end
+    else
+        print('no result')
     end
-else
-    print('no result')
 end
+
+print('Connecting to wifi')
+wifi.setmode(wifi.STATION)
+wifi.sta.config('inferno-x', 'Virunga1348$')
+wifi.sta.getip()
+
+wifi.eventmon.register(wifi.eventmon.STA_GOT_IP, function(T)
+    local own_ip = T.IP
+    print('Starting mdns discovery')
+    mc.query( service_to_query, query_timeout, own_ip,  result_handler)
+end)
