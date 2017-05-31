@@ -23,7 +23,8 @@ The code below queries all mqtt brokers available on the local network and print
     -- handler to do some thing useful with mdns query results
     local query_result_handler  = function(err,query_result)
         if (query_result ~= nil) then
-            local broker_ip,broker_port = query_result[1].ipv4,query_result[1].port
+            print("Got Query results")
+            local broker_ip,broker_port = mc.extractIpAndPortFromResults(res,1)
             print('Broker '..broker_ip ..":"..broker_port)
         else
             print('no mqtt brokers found in local network. please ensure that they are running and advertising on mdns')
