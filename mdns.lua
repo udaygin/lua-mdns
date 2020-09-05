@@ -231,10 +231,11 @@ function query(service, timeout,own_ip,callback)
     end)
     udpSocket:listen()
     port, ip = udpSocket:getaddr()
+    local listenTimer = tmr.create()
     local mdns_query = mdns_make_query(service)
     udpSocket:send(mdns_port, mdns_multicast_ip,mdns_query)
 
-    tmr.alarm(0,timeout*1000,tmr.ALARM_SINGLE, function()
+    listenTimer:register(timeout*1000,tmr.ALARM_SINGLE, function()
         --once the timer is over, cleanup thesockets and collect the results
         udpSocket:close()
         net.multicastLeave(own_ip,mdns_multicast_ip)
@@ -271,6 +272,7 @@ function query(service, timeout,own_ip,callback)
         end
         node.task.post(createCallbackWithArgs(nil,services))
     end)
+    listenTimer:start()
 end
 
 -- query results and 1 based index to identify the result to return when there are more than one matches
